@@ -1,0 +1,164 @@
+import pygame
+import random
+
+WIDTH = 1600
+HEIGHT = 800
+
+CIRCLE_RADIUS = 10
+CIRCLE_SPEED = 3
+LEVEL_UP_EXPERIENCE = 100
+
+BLOCK_COLORS = [(255,0,0),(0,255,90),(0,0,255),(255,255,0)]
+current_level = 1
+BLOCK_MAP = {
+    1:[(5,1),(10,2),(25,3)],
+    2:[(5,1),(10,2),(25,3),(40,5),(60,10)],
+    3:[(5,1),(10,2),(25,3),(40,5),(60,10),(80,25)],
+    4:[(40,5),(60,10),(80,25),(100,30),(120,40)],
+    5:[(60,10),(80,25),(100,30),(120,40),(140,50)],
+    6:[(80,25),(100,30),(120,40),(140,50),(160,60)],
+    7:[(100,30),(120,40),(140,50),(160,60),(180,80)],
+    8:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    9:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    10:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    11:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    12:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    13:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    14:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    15:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+}
+ 
+pygame.init()
+screen = pygame.display.set_mode((WIDTH,HEIGHT))
+pygame.display.set_caption("BallBall_Game")
+
+clock = pygame.time.Clock()
+
+class Circle:
+    def __init__(self):
+        self.x = WIDTH // 2
+        self.y = HEIGHT // 2 
+        self.radius = CIRCLE_RADIUS
+        self.level = 1
+        self.experience = 0
+        self.speedpeed = CIRCLE_SPEED
+        self.last_mouse_direction = pygame.Vector2(0,0)
+        self.boost_time = 3
+        self.boost_enegy = self.boost_time
+        self.boosting = False
+
+    def update(self):
+        #加速
+        pressed = pygame.mouse.get_pressed()
+        if pressed[0]:
+            self.boosting = True
+        else:
+            self.boosting = False
+        
+        if self.boosting:
+            if self.boost_enegy > 0:
+                self.speed += 1
+                self.boost_enegy -= 1
+            else:
+                self.boosting = False
+        else:
+            self.speed = CIRCLE_SPEED
+            self.boost_enegy = self.boost_time
+
+        mouse_move = pygame.mouse.get_rel()
+        move_vector = pygame.Vector2(mouse_move)
+        if move_vector.length() > 0:
+            self.last_mouse_direction = move_vector
+
+        angle = self.last_mouse_direction.angle_to((1,0))
+        speed_vector = pygame.Vector2(self.speed,0).rotate(-angle)
+        self.x += speed_vector[0]
+        self.y += speed_vector[1]
+
+        self.x = max(self.radius,min(WIDTH - self.radius,self.x))
+        self.y = max(self.radius,min(HEIGHT - self.radius,self.y))
+
+        self.experience += 0
+        if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
+            self.level_up()
+        
+    def level_up(self):
+        global current_level
+        self.level += 1
+        self.radius += 10
+        self.experience = 0 
+        self.speed -= 0.1
+        current_level += 1 
+
+    def draw(self):
+        pygame.draw.circle(screen,(255,255,255),(int(self.x),int(self.y)),self.radius)
+        bar_length = int(LEVEL_UP_EXPERIENCE*self.level)/2
+        need_experience = int(self.experience)/2
+        pygame.draw.rect(screen, (255, 255, 255), (int(self.x - bar_length / 2), int(self.y - (self.radius+8) ), bar_length, 5))
+        pygame.draw.rect(screen,(0,255,0),(int(self.x - bar_length / 2),int(self.y - (self.radius+8)),need_experience,5))
+
+class Block:
+    def __init__(self,x,y,size,color,experience):
+        self.x = x
+        self.y = y 
+        self.size = size
+        self.color = color
+        self.experience = experience
+
+
+    def draw(self):
+        pygame.draw.rect(screen,self.color,pygame.Rect(self.x,self.y,self.size,self.size))
+
+
+def random_block():
+    size,experience = random.choice(BLOCK_MAP[current_level])
+    color = random.choice(BLOCK_COLORS)
+    x = random.randint(size//2,WIDTH - size//2)
+    y = random.randint(size//2,HEIGHT - size//2)
+    return Block(x,y,size,color,experience)
+
+circle = Circle()
+blocks = []
+for _ in range(50):
+    blocks.append(random_block())
+
+def check_collision(circle,blocks):
+    for block in blocks:
+        circle_area = pygame.Surface((circle.radius * 2,circle.radius * 2)).get_rect()
+        block_area = pygame.Surface((block.size,block.size)).get_rect()
+
+        circle_area.center = (circle.x,circle.y)
+        block_area.center = (block.x + block.size//2 , block.y + block.size//2)
+
+        if circle_area.colliderect(block_area):
+            if circle_area.width * circle_area.height > block_area.width *block_area.height:
+                circle.experience += block.experience
+                blocks.remove(block)
+            else:
+                pass
+
+running = True 
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                exit()
+    
+    screen.fill((0,0,0))
+    circle.update()
+    check_collision(circle,blocks)
+
+    if len(blocks) < 200 and random.randint(1,10) == 1:
+        blocks.append(random_block())
+
+    for block in blocks:
+        block.draw()
+    
+    circle.draw()
+
+    pygame.display.flip()
+    clock.tick(60)
