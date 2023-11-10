@@ -1,8 +1,21 @@
 import pygame
 import random
+import sys
+
+pygame.init()
+pygame.font.init()
 
 WIDTH = 1600
 HEIGHT = 800
+
+WHITE = (255, 255, 255)  
+BLACK = (0, 0, 0)  
+GREEN = (0, 255, 0)  
+font = pygame.font.Font(None, 50)  
+
+game_over = False  
+game_paused = False  
+
 
 CIRCLE_RADIUS = 10
 CIRCLE_SPEED = 3
@@ -26,9 +39,14 @@ BLOCK_MAP = {
     13:[(120,40),(140,50),(160,60),(180,80),(200,100)],
     14:[(120,40),(140,50),(160,60),(180,80),(200,100)],
     15:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    16:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    17:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    18:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    19:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    20:[(120,40),(140,50),(160,60),(180,80),(200,100)],
 }
  
-pygame.init()
+
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
 pygame.display.set_caption("BallBall_Game")
 
@@ -79,10 +97,12 @@ class Circle:
         self.x = max(self.radius,min(WIDTH - self.radius,self.x))
         self.y = max(self.radius,min(HEIGHT - self.radius,self.y))
 
-        self.experience += 0
+        self.experience += 1
         if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
             self.level_up()
-    
+
+        self.rect.topleft = (self.x, self.y)
+
     def level_up(self):
         global current_level
         self.level += 1
@@ -100,7 +120,11 @@ class Circle:
         need_experience = int(self.experience)/2
         pygame.draw.rect(screen, (255, 255, 255), (int(self.x - bar_length / 2), int(self.y - (self.radius+8) ), bar_length, 5))
         pygame.draw.rect(screen,(0,255,0),(int(self.x - bar_length / 2),int(self.y - (self.radius+8)),need_experience,5))
-
+    
+    def kill(self):  
+        global game_over, game_paused  
+        game_over = True  
+        game_paused = True 
 class Enemy(Circle):
     def __init__(self,x,y,radius,level,speed,current_level):
         self.x = x
@@ -112,7 +136,7 @@ class Enemy(Circle):
         self.color = self.random_color()
         self.current_level = current_level
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
-        
+
     def random_color(self):
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255)]  
         return random.choice(colors) 
@@ -129,6 +153,8 @@ class Enemy(Circle):
         self.experience += 0
         if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
             self.level_up()
+        
+        self.rect.topleft = (self.x, self.y)
 
     def level_up(self):
         global current_level
@@ -142,6 +168,9 @@ class Enemy(Circle):
         need_experience = int(self.experience)/2
         pygame.draw.rect(screen, (255, 255, 255), (int(self.x - bar_length / 2), int(self.y - (self.radius+8) ), bar_length, 5))
         pygame.draw.rect(screen,(0,255,0),(int(self.x - bar_length / 2),int(self.y - (self.radius+8)),need_experience,5))
+
+    def kill(self):  
+        enemy_list.remove(self)
 
 class Block:
     def __init__(self,x,y,size,color,experience):
@@ -171,7 +200,7 @@ for _ in range(50):
 
 #调用敌方圆
 enemy_list = []  
-for _ in range(5):  # 创建5个敌方小球作为示例，您可以根据需要调整数量  
+for _ in range(8):  
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
@@ -199,6 +228,10 @@ def check_collision2(circle, enemy_circles):
                     circle.experience += enemy.experience + enemy.get_required_experience()  
                     circle.level_up()  
                     enemy.kill()  
+                elif enemy.level > circle.level:
+                        enemy.experience += circle.experience + circle.get_required_experience()  
+                        enemy.level_up()  
+                        circle.kill()
                 else:  
                     pass  
 
@@ -209,7 +242,7 @@ def check_collision2(circle, enemy_circles):
                     enemy.experience += other_enemy.experience + other_enemy.get_required_experience()  
                     enemy.level_up()  
                     other_enemy.kill()  
-                else:  
+                else:
                     pass
 
 
@@ -223,7 +256,17 @@ while running:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 exit()
-    
+
+        if event.type == pygame.MOUSEBUTTONDOWN:  
+            if game_over and game_paused:    
+                game_over = False  
+                game_paused = False  
+                enemy_list.clear()
+                for _ in range(8):  
+                    enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
+                    enemy_list.append(enemy)  
+
+
     screen.fill((0,0,0))
     circle.update()
     check_collision1(circle,blocks)  
@@ -235,13 +278,25 @@ while running:
         enemy.draw()
         pygame.draw.circle(screen, enemy.color, (int(enemy.x), int(enemy.y)), enemy.radius) 
     
-    check_collision2(circle, enemy_list) 
+    check_collision2(circle, enemy_list)
+    check_collision2(enemy, enemy_list)
     if len(blocks) < 200 and random.randint(1,10) == 1:
         blocks.append(random_block())
 
     for block in blocks:
         block.draw()
     
+    if game_over:  
+        screen.fill(BLACK)  
+        
+        text = font.render("Game Over!!!", True, WHITE)    
+        screen.blit(text, text.get_rect(center=(WIDTH / 2, HEIGHT / 2)))    
+
+        button_text = font.render("Again", True, WHITE)    
+        button_rect = button_text.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 50))   
+        screen.blit(button_text, button_rect)   
+        
+        pygame.display.flip()   
 
     pygame.display.flip()
     clock.tick(60)
