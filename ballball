@@ -35,17 +35,18 @@ pygame.display.set_caption("BallBall_Game")
 clock = pygame.time.Clock()
 
 class Circle:
-    def __init__(self):
-        self.x = WIDTH // 2
-        self.y = HEIGHT // 2 
-        self.radius = CIRCLE_RADIUS
-        self.level = 1
+    def __init__(self,x,y,radius,level):
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.level = level
         self.experience = 0
         self.speedpeed = CIRCLE_SPEED
         self.last_mouse_direction = pygame.Vector2(0,0)
         self.boost_time = 3
         self.boost_enegy = self.boost_time
         self.boosting = False
+        self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
     def update(self):
         #加速
@@ -81,7 +82,7 @@ class Circle:
         self.experience += 0
         if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
             self.level_up()
-        
+    
     def level_up(self):
         global current_level
         self.level += 1
@@ -90,6 +91,9 @@ class Circle:
         self.speed -= 0.1
         current_level += 1 
 
+    def get_required_experience(self):  
+        return LEVEL_UP_EXPERIENCE * self.level * (self.level - 1) // 2 
+
     def draw(self):
         pygame.draw.circle(screen,(255,255,255),(int(self.x),int(self.y)),self.radius)
         bar_length = int(LEVEL_UP_EXPERIENCE*self.level)/2
@@ -97,7 +101,7 @@ class Circle:
         pygame.draw.rect(screen, (255, 255, 255), (int(self.x - bar_length / 2), int(self.y - (self.radius+8) ), bar_length, 5))
         pygame.draw.rect(screen,(0,255,0),(int(self.x - bar_length / 2),int(self.y - (self.radius+8)),need_experience,5))
 
-class Enemy:
+class Enemy(Circle):
     def __init__(self,x,y,radius,level,speed,current_level):
         self.x = x
         self.y = y
@@ -107,6 +111,8 @@ class Enemy:
         self.speed = speed
         self.color = self.random_color()
         self.current_level = current_level
+        self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
+        
     def random_color(self):
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255)]  
         return random.choice(colors) 
@@ -158,7 +164,7 @@ def random_block():
     return Block(x,y,size,color,experience)
 
 #调用玩家圆
-circle = Circle()
+circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
 blocks = []
 for _ in range(50):
     blocks.append(random_block())
@@ -168,6 +174,8 @@ enemy_list = []
 for _ in range(5):  # 创建5个敌方小球作为示例，您可以根据需要调整数量  
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
+
+
 
 def check_collision1(circle,blocks):
     for block in blocks:
@@ -183,6 +191,27 @@ def check_collision1(circle,blocks):
                 blocks.remove(block)
             else:
                 pass
+
+def check_collision2(circle, enemy_circles):    
+        for enemy in enemy_circles:  
+            if circle.rect.colliderect(enemy.rect):  
+                if circle.level > enemy.level:  
+                    circle.experience += enemy.experience + enemy.get_required_experience()  
+                    circle.level_up()  
+                    enemy.kill()  
+                else:  
+                    pass  
+
+ 
+        for other_enemy in enemy_circles:  
+            if enemy != other_enemy and enemy.rect.colliderect(other_enemy.rect):  
+                if enemy.level > other_enemy.level:  
+                    enemy.experience += other_enemy.experience + other_enemy.get_required_experience()  
+                    enemy.level_up()  
+                    other_enemy.kill()  
+                else:  
+                    pass
+
 
 running = True 
 while running:
@@ -205,9 +234,8 @@ while running:
         check_collision1(enemy,blocks)
         enemy.draw()
         pygame.draw.circle(screen, enemy.color, (int(enemy.x), int(enemy.y)), enemy.radius) 
-
-
-
+    
+    check_collision2(circle, enemy_list) 
     if len(blocks) < 200 and random.randint(1,10) == 1:
         blocks.append(random_block())
 
