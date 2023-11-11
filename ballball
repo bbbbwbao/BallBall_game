@@ -14,7 +14,6 @@ GREEN = (0, 255, 0)
 font = pygame.font.Font(None, 50)  
 
 game_over = False  
-game_paused = False  
 
 
 CIRCLE_RADIUS = 10
@@ -59,7 +58,7 @@ class Circle:
         self.radius = radius
         self.level = level
         self.experience = 0
-        self.speedpeed = CIRCLE_SPEED
+        self.speed = CIRCLE_SPEED
         self.last_mouse_direction = pygame.Vector2(0,0)
         self.boost_time = 3
         self.boost_enegy = self.boost_time
@@ -67,7 +66,7 @@ class Circle:
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
 
     def update(self):
-        #加速
+        #按鼠标加速
         pressed = pygame.mouse.get_pressed()
         if pressed[0]:
             self.boosting = True
@@ -83,7 +82,8 @@ class Circle:
         else:
             self.speed = CIRCLE_SPEED
             self.boost_enegy = self.boost_time
-
+        
+        #获取鼠标的移动方向，并以此方向移动圆。同时限制了圆的位置，使其保持在屏幕范围内
         mouse_move = pygame.mouse.get_rel()
         move_vector = pygame.Vector2(mouse_move)
         if move_vector.length() > 0:
@@ -97,7 +97,7 @@ class Circle:
         self.x = max(self.radius,min(WIDTH - self.radius,self.x))
         self.y = max(self.radius,min(HEIGHT - self.radius,self.y))
 
-        self.experience += 1
+        self.experience += 0
         if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
             self.level_up()
 
@@ -122,9 +122,9 @@ class Circle:
         pygame.draw.rect(screen,(0,255,0),(int(self.x - bar_length / 2),int(self.y - (self.radius+8)),need_experience,5))
     
     def kill(self):  
-        global game_over, game_paused  
+        global game_over 
         game_over = True  
-        game_paused = True 
+
 class Enemy(Circle):
     def __init__(self,x,y,radius,level,speed,current_level):
         self.x = x
@@ -157,7 +157,6 @@ class Enemy(Circle):
         self.rect.topleft = (self.x, self.y)
 
     def level_up(self):
-        global current_level
         self.level += 1
         self.radius += 10
         self.experience = 0 
@@ -194,13 +193,14 @@ def random_block():
 
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
+#生成方块
 blocks = []
-for _ in range(50):
+for _ in range(100):
     blocks.append(random_block())
 
 #调用敌方圆
 enemy_list = []  
-for _ in range(8):  
+for _ in range(5):  
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
@@ -258,11 +258,10 @@ while running:
                 exit()
 
         if event.type == pygame.MOUSEBUTTONDOWN:  
-            if game_over and game_paused:    
-                game_over = False  
-                game_paused = False  
+            if game_over :    
+                game_over = False   
                 enemy_list.clear()
-                for _ in range(8):  
+                for _ in range(5):  
                     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
                     enemy_list.append(enemy)  
 
