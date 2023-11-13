@@ -206,12 +206,9 @@ def check_collision2(circle, enemy_circles):
         for enemy in enemy_circles:  
             if circle.rect.colliderect(enemy.rect):  
                 if circle.level > enemy.level:  
-                    circle.experience += enemy.experience + enemy.get_required_experience()  
-                    circle.level_up()  
+                    circle.experience += enemy.experience + ( sum([LEVEL_UP_EXPERIENCE * enemy.level for enemy.level in range(enemy.level)]))
                     enemy.kill()  
-                elif enemy.level > circle.level:
-                        enemy.experience += circle.experience + circle.get_required_experience()  
-                        enemy.level_up()  
+                elif enemy.level > circle.level: 
                         circle.kill()
                 else:  
                     pass  
@@ -220,8 +217,7 @@ def check_collision2(circle, enemy_circles):
         for other_enemy in enemy_circles:  
             if enemy != other_enemy and enemy.rect.colliderect(other_enemy.rect):  
                 if enemy.level > other_enemy.level:  
-                    enemy.experience += other_enemy.experience + other_enemy.get_required_experience()  
-                    enemy.level_up()  
+                    enemy.experience += other_enemy.experience +sum([LEVEL_UP_EXPERIENCE * other_enemy.level for other_enemy.level in range(other_enemy.level)])  
                     other_enemy.kill()  
                 else:
                     pass
