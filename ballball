@@ -124,7 +124,7 @@ class Circle:
     def kill(self):  
         global game_over 
         game_over = True  
-
+        
 class Enemy(Circle):
     def __init__(self,x,y,radius,level,speed,current_level):
         self.x = x
