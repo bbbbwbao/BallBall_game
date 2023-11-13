@@ -1,6 +1,6 @@
 import pygame
 import random
-import sys
+import time
 
 pygame.init()
 pygame.font.init()
@@ -19,6 +19,10 @@ game_over = False
 CIRCLE_RADIUS = 10
 CIRCLE_SPEED = 3
 LEVEL_UP_EXPERIENCE = 100
+BOOST_TIME = 3 # 加速持续时间（秒）  
+ENEGY_RAISE = 1 # 每秒充能量  
+ENEGY_COST = 1 # 每次加速消耗的充能量
+
 
 BLOCK_COLORS = [(255,0,0),(0,255,90),(0,0,255),(255,255,0)]
 current_level = 1
@@ -59,40 +63,42 @@ class Circle:
         self.level = level
         self.experience = 0
         self.speed = CIRCLE_SPEED
-        self.last_mouse_direction = pygame.Vector2(0,0)
-        self.boost_time = 3
-        self.boost_enegy = self.boost_time
-        self.boosting = False
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
+        self.boost_energy = 0 # 当前充能量  
+        self.max_boost_energy = 3 # 最大充能量  
+        self.boost_start_time = None # 记录加速开始的时间  
+        self.recharge_start_time = None # 记录充能开始的时间  
+        self.boosting = False # 当前是否处于加速状态  
+
 
     def update(self):
-        #按鼠标加速
-        pressed = pygame.mouse.get_pressed()
-        if pressed[0]:
-            self.boosting = True
-        else:
-            self.boosting = False
-        
-        if self.boosting:
-            if self.boost_enegy > 0:
-                self.speed += 1
-                self.boost_enegy -= 1
-            else:
-                self.boosting = False
-        else:
-            self.speed = CIRCLE_SPEED
-            self.boost_enegy = self.boost_time
-        
-        #获取鼠标的移动方向，并以此方向移动圆。同时限制了圆的位置，使其保持在屏幕范围内
-        mouse_move = pygame.mouse.get_rel()
-        move_vector = pygame.Vector2(mouse_move)
-        if move_vector.length() > 0:
-            self.last_mouse_direction = move_vector
-
-        angle = self.last_mouse_direction.angle_to((1,0))
-        speed_vector = pygame.Vector2(self.speed,0).rotate(-angle)
-        self.x += speed_vector[0]
-        self.y += speed_vector[1]
+        keys = pygame.key.get_pressed()  
+        if keys[pygame.K_UP]:  
+            self.y -= self.speed  
+        if keys[pygame.K_DOWN]:  
+            self.y += self.speed  
+        if keys[pygame.K_LEFT]:  
+            self.x -= self.speed  
+        if keys[pygame.K_RIGHT]:  
+            self.x += self.speed  
+        if keys[pygame.K_SPACE] and self.boost_energy >= ENEGY_COST: # 如果有足够的充能量，则进行加速  
+            if not self.boosting or time.time() - self.boost_start_time > BOOST_TIME: # 如果当前没有在加速，或者加速时间已过，则可以开始新一轮的加速  
+                self.boosting = True  
+                self.boost_start_time = time.time() # 记录加速开始的时间  
+                self.speed += 2 # 提升速度  
+                self.boost_energy -= ENEGY_COST # 消耗充能量  
+                          
+        elif not keys[pygame.K_SPACE] and self.boosting: # 如果停止加速，则开始充能  
+            self.boosting = False  
+            self.recharge_start_time = time.time() # 记录充能开始的时间  
+              
+        # 如果在充能状态，则进行充能  
+        if self.recharge_start_time is not None and time.time() - self.recharge_start_time > ENEGY_RAISE:   
+            self.boost_energy = min(self.boost_energy + ENEGY_RAISE, self.max_boost_energy) # 充能量不超过最大值  
+            self.recharge_start_time = None # 重置充能开始的时间  
+        else:  
+            self.speed = CIRCLE_SPEED  
+            self.boost_energy = 3
 
         self.x = max(self.radius,min(WIDTH - self.radius,self.x))
         self.y = max(self.radius,min(HEIGHT - self.radius,self.y))
