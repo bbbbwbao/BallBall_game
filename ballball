@@ -152,6 +152,22 @@ class Enemy(Circle):
     def kill(self):  
         enemy_list.remove(self)
 
+class Item:  
+    def __init__(self):  
+        self.items = []  
+        self.item_probabilities = [3, 1, 1, 1, 1]  # 道具出现概率  
+        self.active_item = None  # 当前激活的道具  
+        self.can_fire_bullet = True  # 是否可以发射分裂弹  
+
+    def create_item(self):  
+        # 根据概率创建道具  
+        item_type = random.choices([*range(len(self.items))], weights=self.item_probabilities, k=1)[0]  
+        if item_type == 4 and self.can_fire_bullet:  # 如果是分裂弹并且可以发射  
+            self.active_item = self.items[item_type]()  
+            self.can_fire_bullet = False  
+        else:  
+            self.active_item = self.items[item_type]() 
+
 class Block:
     def __init__(self,x,y,size,color,experience):
         self.x = x
@@ -195,7 +211,7 @@ def check_collision1(circle,blocks):
         circle_area.center = (circle.x,circle.y)
         block_area.center = (block.x + block.size//2 , block.y + block.size//2)
 
-        if circle_area.colliderect(block_area):
+        if circle_area.colliderect(block_area): 
             if circle_area.width * circle_area.height > block_area.width *block_area.height:
                 circle.experience += block.experience
                 blocks.remove(block)
