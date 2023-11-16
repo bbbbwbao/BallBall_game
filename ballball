@@ -1,6 +1,6 @@
 import pygame
 import random
-import sys
+import time
 
 pygame.init()
 pygame.font.init()
@@ -14,7 +14,7 @@ GREEN = (0, 255, 0)
 font = pygame.font.Font(None, 50)  
 
 game_over = False  
-
+item_list =[]
 
 CIRCLE_RADIUS = 10
 CIRCLE_SPEED = 3
@@ -45,6 +45,7 @@ BLOCK_MAP = {
     20:[(120,40),(140,50),(160,60),(180,80),(200,100)],
 }
  
+
 
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
 pygame.display.set_caption("BallBall_Game")
@@ -152,21 +153,57 @@ class Enemy(Circle):
     def kill(self):  
         enemy_list.remove(self)
 
-class Item:  
-    def __init__(self):  
-        self.items = []  
-        self.item_probabilities = [3, 1, 1, 1, 1]  # 道具出现概率  
-        self.active_item = None  # 当前激活的道具  
-        self.can_fire_bullet = True  # 是否可以发射分裂弹  
 
-    def create_item(self):  
-        # 根据概率创建道具  
-        item_type = random.choices([*range(len(self.items))], weights=self.item_probabilities, k=1)[0]  
-        if item_type == 4 and self.can_fire_bullet:  # 如果是分裂弹并且可以发射  
-            self.active_item = self.items[item_type]()  
-            self.can_fire_bullet = False  
-        else:  
-            self.active_item = self.items[item_type]() 
+class Item:     
+    def __init__(self,image, effect, duration):   
+        self.image = pygame.image.load(image)  
+        self.image = pygame.transform.scale(self.image, (40, 40))   
+        self.effect = effect    
+        self.duration = duration    
+        self.start_time = pygame.time.get_ticks()    
+        self.active = True   
+        self.life_span = 10 * 1000  # duration in milliseconds  
+  
+    def update(self, circles, enemies):  
+        if self.active:  
+            if self.life_span > 0:    
+                self.life_span -= pygame.time.get_ticks() - self.start_time  
+                self.start_time = pygame.time.get_ticks()  
+                if self.life_span <= 0 or any(check_collision3(self, circle) for circle in circles) or any(check_collision3(self, enemy) for enemy in enemies):    
+                    self.active = False  
+            else:  
+                self.active = False  
+  
+    def draw(self):    
+        if self.active:   
+            screen.blit(self.image, self.rect)
+
+def create_item():  
+    item = random.choice(items)  
+    item_pos = (random.randint(0, WIDTH), random.randint(0, HEIGHT))   
+    item.rect = pygame.Rect(item_pos[0], item_pos[1], 40, 40)  # create a rectangle for the item  
+    item_list.append(item) 
+
+def lightning_speed(ball):  
+    ball.speed += 2  
+    ball.lightning_speed_active = True  
+    ball.lightning_speed_duration = 3  
+  
+def magnet(ball):  
+    ball.magnet_active = True  
+    ball.lightning_speed_duration = 5
+
+def upgrade(ball):  
+    ball.level += 1  
+  
+def downgrade(ball):  
+    ball.level -= 1  
+  
+def split_shot(ball):  
+    ball.split_shot_active = True
+
+
+
 
 class Block:
     def __init__(self,x,y,size,color,experience):
@@ -188,6 +225,7 @@ def random_block():
     y = random.randint(size//2,HEIGHT - size//2)
     return Block(x,y,size,color,experience)
 
+    
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
 #生成方块
@@ -201,7 +239,13 @@ for _ in range(5):
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
-
+items = [  
+    Item("lightning.png", lightning_speed, 3),  
+    Item("magnet.png", magnet, 5),  
+    Item("upgrade.png", upgrade, 0),  
+    Item("downgrade.png", downgrade, 0),  
+    Item("split_shot.png", split_shot, 0),  
+]   
 
 def check_collision1(circle,blocks):
     for block in blocks:
@@ -228,8 +272,8 @@ def check_collision2(circle, enemy_circles):
                         circle.kill()
                 else:  
                     pass  
+        
 
- 
         for other_enemy in enemy_circles:  
             if enemy != other_enemy and enemy.rect.colliderect(other_enemy.rect):  
                 if enemy.level > other_enemy.level:  
@@ -238,6 +282,31 @@ def check_collision2(circle, enemy_circles):
                 else:
                     pass
 
+def check_collision3(item, circles, enemies):  
+    for circle in circles:  
+        item_area = pygame.Surface((item.image.get_width(), item.image.get_height())).get_rect()  
+        circle_area = pygame.Surface((circle.radius * 2, circle.radius * 2)).get_rect()  
+  
+        item_area.center = (item.x + item.image.get_width() / 2, item.y + item.image.get_height() / 2)  
+        circle_area.center = (circle.x, circle.y)  
+  
+        if item_area.colliderect(circle_area):   
+            items.remove(item)   
+            return True  
+      
+
+    for enemy in enemies:  
+        item_area = pygame.Surface((item.image.get_width(), item.image.get_height())).get_rect()  
+        enemy_area = pygame.Surface((enemy.size, enemy.size)).get_rect()  
+  
+        item_area.center = (item.x + item.image.get_width() / 2, item.y + item.image.get_height() / 2)  
+        enemy_area.center = (enemy.x + enemy.size // 2, enemy.y + enemy.size // 2)  
+  
+        if item_area.colliderect(enemy_area):  
+            items.remove(item)  
+            return True  
+      
+    return False  
 
 running = True 
 while running:
@@ -258,8 +327,15 @@ while running:
                     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
                     enemy_list.append(enemy)  
 
-
     screen.fill((0,0,0))
+
+    for item in item_list[:]:  # Create a copy of the list to avoid modifying it while iterating  
+        item.update()  
+        if not check_collision3(item, circle, enemy):  
+            item.draw()  
+        else:  
+            item_list.remove(item)  # Remove the item from the active items list if collision detected
+
     circle.update()
     check_collision1(circle,blocks)  
     circle.draw()
