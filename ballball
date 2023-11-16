@@ -155,10 +155,11 @@ class Enemy(Circle):
 
 
 class Item:     
-    def __init__(self,image, effect, duration):   
+    def __init__(self,image,rect,effect,duration):   
+        self.rect = rect
+        self.effect = effect
         self.image = pygame.image.load(image)  
-        self.image = pygame.transform.scale(self.image, (40, 40))   
-        self.effect = effect    
+        self.image = pygame.transform.scale(self.image, (40, 40))       
         self.duration = duration    
         self.start_time = pygame.time.get_ticks()    
         self.active = True   
@@ -178,11 +179,6 @@ class Item:
         if self.active:   
             screen.blit(self.image, self.rect)
 
-def create_item():  
-    item = random.choice(items)  
-    item_pos = (random.randint(0, WIDTH), random.randint(0, HEIGHT))   
-    item.rect = pygame.Rect(item_pos[0], item_pos[1], 40, 40)  # create a rectangle for the item  
-    item_list.append(item) 
 
 def lightning_speed(ball):  
     ball.speed += 2  
@@ -225,6 +221,8 @@ def random_block():
     y = random.randint(size//2,HEIGHT - size//2)
     return Block(x,y,size,color,experience)
 
+
+
     
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
@@ -239,12 +237,15 @@ for _ in range(5):
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
+
+item_pos = (random.randint(0, WIDTH), random.randint(0, HEIGHT))   
+item_rect = pygame.Rect(item_pos[0], item_pos[1], 40, 40) 
 items = [  
-    Item("lightning.png", lightning_speed, 3),  
-    Item("magnet.png", magnet, 5),  
-    Item("upgrade.png", upgrade, 0),  
-    Item("downgrade.png", downgrade, 0),  
-    Item("split_shot.png", split_shot, 0),  
+    Item("lightning.png",item_rect,lightning_speed, 3),  
+    Item("magnet.png",item_rect, magnet, 5),  
+    Item("upgrade.png",item_rect, upgrade, 0),  
+    Item("downgrade.png",item_rect, downgrade, 0),  
+    Item("split_shot.png",item_rect, split_shot, 0),  
 ]   
 
 def check_collision1(circle,blocks):
@@ -328,9 +329,18 @@ while running:
                     enemy_list.append(enemy)  
 
     screen.fill((0,0,0))
+    
+    item = random.choice(items)  
+    item_pos = (random.randint(0, WIDTH), random.randint(0, HEIGHT))   
+    item_rect = pygame.Rect(item_pos[0], item_pos[1], 40, 40)  # create a rectangle for the item  
+    item_list.append(item) 
 
-    for item in item_list[:]:  # Create a copy of the list to avoid modifying it while iterating  
-        item.update()  
+    if  random.randint(1,25) == 1:
+        item = random.choice(items)    
+        item_list.append(item) 
+
+    for item in item_list[:]:   
+        item.update(circle,enemy)  
         if not check_collision3(item, circle, enemy):  
             item.draw()  
         else:  
