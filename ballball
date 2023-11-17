@@ -14,11 +14,15 @@ GREEN = (0, 255, 0)
 font = pygame.font.Font(None, 50)  
 
 game_over = False  
-item_list =[]
+
 
 CIRCLE_RADIUS = 10
 CIRCLE_SPEED = 3
 LEVEL_UP_EXPERIENCE = 100
+BOOST_TIME = 3 
+ENERGY_RAISE = 1  
+ENERGY_COST = 1 
+CHECK_TIME = 0.1
 
 BLOCK_COLORS = [(255,0,0),(0,255,90),(0,0,255),(255,255,0)]
 current_level = 1
@@ -59,12 +63,16 @@ class Circle:
         self.level = level
         self.experience = 0
         self.speed = CIRCLE_SPEED
-        self.boost_time = 3
-        self.boost_enegy = self.boost_time
-        self.boosting = False
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
+        self.max_boost_energy = 3 
+        self.boost_energy = self.max_boost_energy
+        self.boost_start_time = None 
+        self.last_boost_check_time = 0  
+        self.boosting = False   
+
 
     def update(self):
+        current_time = time.time()
         keys = pygame.key.get_pressed()  
         if keys[pygame.K_UP]:  
             self.y -= self.speed  
@@ -74,6 +82,19 @@ class Circle:
             self.x -= self.speed  
         if keys[pygame.K_RIGHT]:  
             self.x += self.speed  
+        if keys[pygame.K_SPACE] and self.boost_energy >= ENERGY_COST:     
+            if self.last_boost_check_time != 0:  
+                return
+            self.last_boost_check_time = current_time  
+            self.speed += 2   
+            self.boost_energy -= ENERGY_COST  
+        else:  
+            
+            if self.last_boost_check_time != 0:  
+                speed_time = current_time - self.last_boost_check_time  
+                self.boost_energy = min(self.boost_energy + speed_time * ENERGY_RAISE, self.max_boost_energy)  
+                self.last_boost_check_time = 0  
+                self.speed = CIRCLE_SPEED 
 
         self.x = max(self.radius,min(WIDTH - self.radius,self.x))
         self.y = max(self.radius,min(HEIGHT - self.radius,self.y))
@@ -152,7 +173,6 @@ class Enemy(Circle):
     def kill(self):  
         enemy_list.remove(self)
 
-
 class Block:
     def __init__(self,x,y,size,color,experience):
         self.x = x
@@ -173,7 +193,6 @@ def random_block():
     y = random.randint(size//2,HEIGHT - size//2)
     return Block(x,y,size,color,experience)
 
-    
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
 #生成方块
@@ -187,16 +206,7 @@ for _ in range(5):
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
-"""
-#调用道具
-items = [  
-    Item("lightning.png", lightning_speed, 3),  
-    Item("magnet.png", magnet, 5),  
-    Item("upgrade.png", upgrade, 0),  
-    Item("downgrade.png", downgrade, 0),  
-    Item("split_shot.png", split_shot, 0),  
-]  
-"""
+
 
 def check_collision1(circle,blocks):
     for block in blocks:
@@ -206,7 +216,7 @@ def check_collision1(circle,blocks):
         circle_area.center = (circle.x,circle.y)
         block_area.center = (block.x + block.size//2 , block.y + block.size//2)
 
-        if circle_area.colliderect(block_area): 
+        if circle_area.colliderect(block_area):
             if circle_area.width * circle_area.height > block_area.width *block_area.height:
                 circle.experience += block.experience
                 blocks.remove(block)
@@ -217,18 +227,22 @@ def check_collision2(circle, enemy_circles):
         for enemy in enemy_circles:  
             if circle.rect.colliderect(enemy.rect):  
                 if circle.level > enemy.level:  
-                    circle.experience += enemy.experience + ( sum([LEVEL_UP_EXPERIENCE * enemy.level for enemy.level in range(enemy.level)]))
+                    circle.experience += enemy.experience + enemy.get_required_experience()  
+                    circle.level_up()  
                     enemy.kill()  
-                elif enemy.level > circle.level: 
+                elif enemy.level > circle.level:
+                        enemy.experience += circle.experience + circle.get_required_experience()  
+                        enemy.level_up()  
                         circle.kill()
                 else:  
                     pass  
-        
 
+ 
         for other_enemy in enemy_circles:  
             if enemy != other_enemy and enemy.rect.colliderect(other_enemy.rect):  
                 if enemy.level > other_enemy.level:  
-                    enemy.experience += other_enemy.experience +sum([LEVEL_UP_EXPERIENCE * other_enemy.level for other_enemy.level in range(other_enemy.level)])  
+                    enemy.experience += other_enemy.experience + other_enemy.get_required_experience()  
+                    enemy.level_up()  
                     other_enemy.kill()  
                 else:
                     pass
@@ -253,8 +267,8 @@ while running:
                     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
                     enemy_list.append(enemy)  
 
-    screen.fill((0,0,0))
 
+    screen.fill((0,0,0))
     circle.update()
     check_collision1(circle,blocks)  
     circle.draw()
