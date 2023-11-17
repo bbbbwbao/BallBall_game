@@ -113,6 +113,11 @@ class Circle:
         self.speed -= 0.1
         current_level += 1 
 
+    def upgrade(self):
+        self.experience += current_level *LEVEL_UP_EXPERIENCE
+    
+    def downgrade(self):
+        self.experience -= current_level *LEVEL_UP_EXPERIENCE
     def get_required_experience(self):  
         return LEVEL_UP_EXPERIENCE * self.level * (self.level - 1) // 2 
 
@@ -164,6 +169,12 @@ class Enemy(Circle):
         self.experience = 0 
         self.current_level += 1 
 
+    def upgrade(self):
+        self.experience += current_level *LEVEL_UP_EXPERIENCE
+    
+    def downgrade(self):
+        self.experience -= current_level *LEVEL_UP_EXPERIENCE
+
     def draw(self):
         bar_length = int(LEVEL_UP_EXPERIENCE*self.level)/2
         need_experience = int(self.experience)/2
@@ -172,6 +183,32 @@ class Enemy(Circle):
 
     def kill(self):  
         enemy_list.remove(self)
+
+class Upgradeitem:  
+    def __init__(self):  
+        self.image = pygame.image.load('upgrade.png') 
+        self.image = pygame.transform.scale(self.image, (40, 40)) 
+        self.x =  random.randint(0, WIDTH)
+        self.y =  random.randint(0, HEIGHT) 
+        self.size = 40 
+        self.rect = self.image.get_rect()  
+        self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+
+    def draw(self):
+        pygame.draw.rect(screen,self.image,pygame.Rect(self.x,self.y,self.size,self.size))    
+  
+class Downgradeitem:  
+    def __init__(self):  
+        self.image = pygame.image.load('downgrade.png') 
+        self.image = pygame.transform.scale(self.image, (40, 40)) 
+        self.x =  random.randint(0, WIDTH)
+        self.y =  random.randint(0, HEIGHT) 
+        self.size = 40 
+        self.rect = self.image.get_rect()  
+        self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+
+    def draw(self):
+        pygame.draw.rect(screen,self.image,pygame.Rect(self.x,self.y,self.size,self.size)) 
 
 class Block:
     def __init__(self,x,y,size,color,experience):
@@ -195,6 +232,7 @@ def random_block():
 
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
+
 #生成方块
 blocks = []
 for _ in range(100):
@@ -206,6 +244,9 @@ for _ in range(5):
     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
     enemy_list.append(enemy)  
 
+#调用道具
+upgrades = []
+downgrades = []
 
 
 def check_collision1(circle,blocks):
@@ -269,24 +310,31 @@ while running:
 
 
     screen.fill((0,0,0))
+
+#我方球
     circle.update()
     check_collision1(circle,blocks)  
     circle.draw()
-
+    
+#敌人球
     for enemy in enemy_list:  
         enemy.update()
         check_collision1(enemy,blocks)
         enemy.draw()
         pygame.draw.circle(screen, enemy.color, (int(enemy.x), int(enemy.y)), enemy.radius) 
-    
+
     check_collision2(circle, enemy_list)
     check_collision2(enemy, enemy_list)
+
+#方块
     if len(blocks) < 200 and random.randint(1,10) == 1:
         blocks.append(random_block())
 
     for block in blocks:
         block.draw()
-    
+
+#道具
+
     if game_over:  
         screen.fill(BLACK)  
         
