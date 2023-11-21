@@ -49,7 +49,8 @@ BLOCK_MAP = {
     20:[(120,40),(140,50),(160,60),(180,80),(200,100)],
 }
  
-
+item_timer = 0
+items = []
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
 pygame.display.set_caption("BallBall_Game")
 
@@ -69,7 +70,7 @@ class Circle:
         self.boost_start_time = None 
         self.last_boost_check_time = 0  
         self.boosting = False   
-
+        self.lightning_duration = 0
 
     def update(self):
         current_time = time.time()
@@ -105,6 +106,12 @@ class Circle:
 
         self.rect.topleft = (self.x, self.y)
 
+        if self.lightning_duration > 0:  
+            self.lightning_duration -= 1   
+            self.speed += 0.1
+        else:  
+            self.speed = CIRCLE_SPEED  
+
     def level_up(self):
         global current_level
         self.level += 1
@@ -113,13 +120,28 @@ class Circle:
         self.speed -= 0.1
         current_level += 1 
 
-    def upgrade(self):
-        self.experience += current_level *LEVEL_UP_EXPERIENCE
-    
-    def downgrade(self):
-        self.experience -= current_level *LEVEL_UP_EXPERIENCE
+    def level_down(self):
+        global current_level
+        self.level -= 1
+        self.radius -= 10
+        self.speed += 0.1
+        current_level -= 1
+
     def get_required_experience(self):  
         return LEVEL_UP_EXPERIENCE * self.level * (self.level - 1) // 2 
+
+    def collide_with_item1(self, item):  
+        if self.rect.colliderect(item.rect): 
+            if isinstance(item, Upgradeitem):  
+                self.level_up()
+            elif isinstance(item,Downgradeitem) :
+                self.level_down()
+            elif isinstance(item,Lightning):
+                self.speed += 1
+                self.lightning_duration = 180
+            elif isinstance(item,Magnet):
+                pass
+            items.remove(item)  
 
     def draw(self):
         pygame.draw.circle(screen,(255,255,255),(int(self.x),int(self.y)),self.radius)
@@ -143,7 +165,9 @@ class Enemy(Circle):
         self.color = self.random_color()
         self.current_level = current_level
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
-
+        self.lightning_duration = 0
+        self.speed_boost = 1.5
+        
     def random_color(self):
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255)]  
         return random.choice(colors) 
@@ -163,17 +187,33 @@ class Enemy(Circle):
         
         self.rect.topleft = (self.x, self.y)
 
+            
     def level_up(self):
+
         self.level += 1
         self.radius += 10
         self.experience = 0 
         self.current_level += 1 
 
-    def upgrade(self):
-        self.experience += current_level *LEVEL_UP_EXPERIENCE
-    
-    def downgrade(self):
-        self.experience -= current_level *LEVEL_UP_EXPERIENCE
+    def level_down(self):
+        self.level -= 1
+        self.radius -= 10
+        self.current_level -= 1
+
+
+    def get_required_experience(self):  
+        return LEVEL_UP_EXPERIENCE * self.level * (self.level - 1) // 2 
+
+    def collide_with_item2(self, item):  
+        if self.rect.colliderect(item.rect): 
+            if isinstance(item, Upgradeitem):  
+                self.level_up()
+            elif isinstance(item,Downgradeitem) :
+                self.level_down()
+            elif isinstance(item,Lightning):
+                pass
+            items.remove(item)  
+
 
     def draw(self):
         bar_length = int(LEVEL_UP_EXPERIENCE*self.level)/2
@@ -184,8 +224,18 @@ class Enemy(Circle):
     def kill(self):  
         enemy_list.remove(self)
 
-class Upgradeitem:  
+class Item:  
     def __init__(self):  
+        self.life_timer = 0  
+  
+    def update(self):  
+        self.life_timer += 1  
+        if self.life_timer == 600:   
+            items.remove(self) 
+
+class Upgradeitem(Item):  
+    def __init__(self):  
+        super().__init__()  
         self.image = pygame.image.load('upgrade.png') 
         self.image = pygame.transform.scale(self.image, (40, 40)) 
         self.x =  random.randint(0, WIDTH)
@@ -193,12 +243,14 @@ class Upgradeitem:
         self.size = 40 
         self.rect = self.image.get_rect()  
         self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+        self.life_timer = 0
 
     def draw(self):
-        pygame.draw.rect(screen,self.image,pygame.Rect(self.x,self.y,self.size,self.size))    
-  
-class Downgradeitem:  
-    def __init__(self):  
+            screen.blit(self.image, self.rect)
+
+class Downgradeitem(Item):  
+    def __init__(self):
+        super().__init__()   
         self.image = pygame.image.load('downgrade.png') 
         self.image = pygame.transform.scale(self.image, (40, 40)) 
         self.x =  random.randint(0, WIDTH)
@@ -206,9 +258,56 @@ class Downgradeitem:
         self.size = 40 
         self.rect = self.image.get_rect()  
         self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+        self.life_timer = 0
 
     def draw(self):
-        pygame.draw.rect(screen,self.image,pygame.Rect(self.x,self.y,self.size,self.size)) 
+            screen.blit(self.image, self.rect)
+
+
+class Lightning(Item):  
+    def __init__(self):  
+        super().__init__() 
+        self.image = pygame.image.load('lightning.png') 
+        self.image = pygame.transform.scale(self.image, (40, 40)) 
+        self.x =  random.randint(0, WIDTH)
+        self.y =  random.randint(0, HEIGHT) 
+        self.size = 40 
+        self.rect = self.image.get_rect()  
+        self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+        self.life_timer = 0
+
+    def draw(self):
+            screen.blit(self.image, self.rect)
+
+class Magnet(Item):  
+    def __init__(self):  
+        super().__init__() 
+        self.image = pygame.image.load('magnet.png') 
+        self.image = pygame.transform.scale(self.image, (40, 40)) 
+        self.x =  random.randint(0, WIDTH)
+        self.y =  random.randint(0, HEIGHT) 
+        self.size = 40 
+        self.rect = self.image.get_rect()  
+        self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+        self.life_timer = 0
+
+    def draw(self):
+            screen.blit(self.image, self.rect)
+
+class Split(Item):  
+    def __init__(self):  
+        super().__init__() 
+        self.image = pygame.image.load('split_shot.png') 
+        self.image = pygame.transform.scale(self.image, (40, 40)) 
+        self.x =  random.randint(0, WIDTH)
+        self.y =  random.randint(0, HEIGHT) 
+        self.size = 40 
+        self.rect = self.image.get_rect()  
+        self.rect.x, self.rect.y = random.randint(0, WIDTH), random.randint(0, HEIGHT)  
+        self.life_timer = 0
+
+    def draw(self):
+            screen.blit(self.image, self.rect)
 
 class Block:
     def __init__(self,x,y,size,color,experience):
@@ -277,12 +376,10 @@ def check_collision2(circle, enemy_circles):
         for enemy in enemy_circles:  
             if circle.rect.colliderect(enemy.rect):  
                 if circle.level > enemy.level:  
-                    circle.experience += enemy.experience + enemy.get_required_experience()  
-                    circle.level_up()  
+                    circle.experience += enemy.experience + enemy.get_required_experience()   
                     enemy.kill()  
                 elif enemy.level > circle.level:
                         enemy.experience += circle.experience + circle.get_required_experience()  
-                        enemy.level_up()  
                         circle.kill()
                 else:  
                     pass  
@@ -292,7 +389,6 @@ def check_collision2(circle, enemy_circles):
             if enemy != other_enemy and enemy.rect.colliderect(other_enemy.rect):  
                 if enemy.level > other_enemy.level:  
                     enemy.experience += other_enemy.experience + other_enemy.get_required_experience()  
-                    enemy.level_up()  
                     other_enemy.kill()  
                 else:
                     pass
@@ -343,6 +439,23 @@ while running:
         block.draw()
 
 #道具
+
+    item_timer += 1  
+    if item_timer >= 900:   
+        item_timer = 0  
+
+        items_to_add = random.sample([Upgradeitem, Downgradeitem, Magnet, Lightning, Split], 2)  
+        for ItemType in items_to_add:  
+            item = ItemType()  
+            items.append(item)
+    
+    for item in items[:]:  
+        item.update()   
+        circle.collide_with_item1(item)  
+        for enemy in enemy_list:  
+            enemy.collide_with_item2(item)  
+        item.draw()    
+    
 
     if game_over:  
         screen.fill(BLACK)  
