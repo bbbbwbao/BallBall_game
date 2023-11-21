@@ -229,7 +229,7 @@ def random_block():
     x = random.randint(size//2,WIDTH - size//2)
     y = random.randint(size//2,HEIGHT - size//2)
     return Block(x,y,size,color,experience)
-
+    
 def random_item(self):
     item_type = random.choice(["upgrade", "downgrade"]) 
     if item_type == "upgrade":  
@@ -238,7 +238,7 @@ def random_item(self):
     else:
         item = Downgradeitem(self)  
         downgrades.append(item)
-        
+
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
 
