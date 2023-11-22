@@ -1,6 +1,7 @@
 import pygame
 import random
 import time
+import math
 
 pygame.init()
 pygame.font.init()
@@ -48,7 +49,9 @@ BLOCK_MAP = {
     19:[(120,40),(140,50),(160,60),(180,80),(200,100)],
     20:[(120,40),(140,50),(160,60),(180,80),(200,100)],
 }
- 
+
+magnet_start_time = None 
+attraction_speed =  0.5
 item_timer = 0
 items = []
 screen = pygame.display.set_mode((WIDTH,HEIGHT))
@@ -71,6 +74,7 @@ class Circle:
         self.last_boost_check_time = 0  
         self.boosting = False   
         self.lightning_duration = 0
+        self.magnet_active = False
 
     def update(self):
         current_time = time.time()
@@ -140,6 +144,8 @@ class Circle:
                 self.speed += 1
                 self.lightning_duration = 180
             elif isinstance(item,Magnet):
+                self.magnet_active = True
+            elif isinstance(item,Split):
                 pass
             items.remove(item)  
 
@@ -321,6 +327,13 @@ class Block:
     def draw(self):
         pygame.draw.rect(screen,self.color,pygame.Rect(self.x,self.y,self.size,self.size))
 
+    def attract(self, target_x, target_y, speed):  
+        vec = [target_x - self.x, target_y - self.y]  
+        distance = math.sqrt(vec[0] ** 2 + vec[1] ** 2)  
+        if distance <= circle.radius * 3:  
+            self.x += vec[0] * speed  
+            self.y += vec[1] * speed  
+        return self.x, self.y
 
 def random_block():
     size,experience = random.choice(BLOCK_MAP[current_level])
@@ -329,14 +342,6 @@ def random_block():
     y = random.randint(size//2,HEIGHT - size//2)
     return Block(x,y,size,color,experience)
     
-def random_item(self):
-    item_type = random.choice(["upgrade", "downgrade"]) 
-    if item_type == "upgrade":  
-        item = Upgradeitem(self)
-        upgrades.append(item)  
-    else:
-        item = Downgradeitem(self)  
-        downgrades.append(item)
 
 #调用玩家圆
 circle = Circle(WIDTH//2,HEIGHT//2,CIRCLE_RADIUS,1)
@@ -436,8 +441,15 @@ while running:
         blocks.append(random_block())
 
     for block in blocks:
-        block.draw()
+        if circle.magnet_active: 
+            if magnet_start_time is None:
+                magnet_start_time = time.time()
+            elif time.time() - magnet_start_time >= 5: 
+                circle.magnet_active = False  
+                magnet_start_time = None 
+            block.x, block.y = block.attract(circle.x, circle.y, attraction_speed)
 
+        block.draw()
 #道具
 
     item_timer += 1  
