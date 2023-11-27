@@ -48,6 +48,19 @@ BLOCK_MAP = {
     18:[(120,40),(140,50),(160,60),(180,80),(200,100)],
     19:[(120,40),(140,50),(160,60),(180,80),(200,100)],
     20:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    21:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    22:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    23:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    24:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    25:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    26:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    27:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    28:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    29:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    30:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    31:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    32:[(120,40),(140,50),(160,60),(180,80),(200,100)],
+    33:[(120,40),(140,50),(160,60),(180,80),(200,100)],
 }
 
 magnet_start_time = None 
@@ -75,7 +88,7 @@ class Circle:
         self.boosting = False   
         self.lightning_duration = 0
         self.magnet_active = False
-
+        
     def update(self):
         current_time = time.time()
         keys = pygame.key.get_pressed()  
@@ -417,24 +430,11 @@ while running:
                 for _ in range(5):  
                     enemy = Enemy(random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100), 10, 1, [random.randrange(-2,2,4), random.randrange(-2,2,4)],1)  
                     enemy_list.append(enemy)  
-
+    
 
     screen.fill((0,0,0))
 
-#我方球
-    circle.update()
-    check_collision1(circle,blocks)  
-    circle.draw()
-    
-#敌人球
-    for enemy in enemy_list:  
-        enemy.update()
-        check_collision1(enemy,blocks)
-        enemy.draw()
-        pygame.draw.circle(screen, enemy.color, (int(enemy.x), int(enemy.y)), enemy.radius) 
 
-    check_collision2(circle, enemy_list)
-    check_collision2(enemy, enemy_list)
 
 #方块
     if len(blocks) < 200 and random.randint(1,10) == 1:
@@ -450,13 +450,28 @@ while running:
             block.x, block.y = block.attract(circle.x, circle.y, attraction_speed)
 
         block.draw()
+
+#我方球
+    circle.update()
+    check_collision1(circle,blocks)  
+    circle.draw()
+    
+#敌人球
+    for enemy in enemy_list:  
+        enemy.update()
+        check_collision1(enemy,blocks)
+        enemy.draw()
+        pygame.draw.circle(screen, enemy.color, (int(enemy.x), int(enemy.y)), enemy.radius) 
+
+    check_collision2(circle, enemy_list)
+    check_collision2(enemy, enemy_list)
 #道具
 
     item_timer += 1  
-    if item_timer >= 900:   
+    if item_timer >=600:   
         item_timer = 0  
 
-        items_to_add = random.sample([Upgradeitem, Downgradeitem, Magnet, Lightning, Split], 2)  
+        items_to_add = random.sample([Upgradeitem, Downgradeitem, Magnet, Lightning, Split], 4)  
         for ItemType in items_to_add:  
             item = ItemType()  
             items.append(item)
