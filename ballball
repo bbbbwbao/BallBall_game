@@ -186,7 +186,7 @@ class Enemy(Circle):
         self.rect = pygame.Rect(x - radius, y - radius, radius * 2, radius * 2)
         self.lightning_duration = 0
         self.speed_boost = 1.5
-        
+    
     def random_color(self):
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (0, 255, 255), (255, 0, 255)]  
         return random.choice(colors) 
@@ -194,13 +194,13 @@ class Enemy(Circle):
     def update(self):
         self.x += self.speed[0]
         self.y += self.speed[1]
-
+        
         if self.x - self.radius < 0 or self.x + self.radius > WIDTH:  
             self.speed[0] *= -1  
         if self.y - self.radius < 0 or self.y + self.radius > HEIGHT:  
             self.speed[1] *= -1 
 
-        self.experience += 0
+        self.experience += 0.1
         if self.experience >= LEVEL_UP_EXPERIENCE*self.level:
             self.level_up()
         
@@ -218,7 +218,6 @@ class Enemy(Circle):
         self.level -= 1
         self.radius -= 10
         self.current_level -= 1
-
 
     def get_required_experience(self):  
         return LEVEL_UP_EXPERIENCE * self.level * (self.level - 1) // 2 
@@ -248,7 +247,7 @@ class Item:
         self.life_timer = 0  
   
     def update(self):  
-        self.life_timer += 1  
+        self.life_timer += 1 
         if self.life_timer == 600:   
             items.remove(self) 
 
